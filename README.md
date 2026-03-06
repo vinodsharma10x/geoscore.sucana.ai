@@ -115,6 +115,30 @@ src/
 - **No secret leaks:** Proxy password is env-only, Supabase uses public anon key
 - **Supabase RLS:** Public read/insert only, no update/delete
 
+## Claude Skills & MCP
+
+GEOScore is available in three forms:
+
+| | SaaS | Claude Skill | MCP Server |
+|---|---|---|---|
+| **Best for** | Anyone with a browser | Claude Code / Desktop power users | Developers building AI workflows |
+| **Setup** | None | Copy files | Config JSON |
+| **Details** | [geoscore.sucana.ai](https://geoscore.sucana.ai) | [skills/README.md](skills/README.md) | [mcp/README.md](mcp/README.md) |
+
+### Quick start — MCP
+
+```bash
+cd mcp && npm install && npm run build
+claude mcp add geoscore node /path/to/mcp/dist/index.js
+```
+
+### Quick start — Claude Code Skill
+
+```bash
+cp -r skills/claude-code ~/.claude/skills/geo-audit
+# Then use: /geo-audit https://example.com
+```
+
 ## Contributing
 
 Pull requests welcome. For major changes, open an issue first.
