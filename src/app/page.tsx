@@ -8,7 +8,7 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<(AnalysisResult & { id?: string }) | null>(null);
 
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +110,7 @@ export default function Home() {
       </section>
 
       {/* Results */}
-      {result && <Report result={result} />}
+      {result && <Report result={result} id={result.id} />}
 
       {/* How it works - only show when no result */}
       {!result && (
