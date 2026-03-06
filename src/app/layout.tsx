@@ -47,7 +47,7 @@ export default function RootLayout({
                 Analyze
               </Link>
               <a
-                href="https://github.com/nicobailon/geoscore.sucana.ai"
+                href="https://github.com/vinodsharma10x/geoscore.sucana.ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-zinc-900 dark:hover:text-zinc-100"
