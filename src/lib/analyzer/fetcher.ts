@@ -1,5 +1,6 @@
 import type { FetchedResources, ParsedPage } from "@/lib/types";
 import { parseHtml } from "./parser";
+import { fetchWithProxy } from "@/lib/proxy";
 
 const FETCH_TIMEOUT = 15000;
 
@@ -45,27 +46,6 @@ async function fetchWithTimeout(
   }
 }
 
-async function fetchWithPlaywright(url: string): Promise<string | null> {
-  let browser;
-  try {
-    const { chromium } = await import("playwright");
-    browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({
-      userAgent: BROWSER_UA,
-    });
-    const page = await context.newPage();
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-    // Wait a bit for any JS-based content to render
-    await page.waitForTimeout(2000);
-    const html = await page.content();
-    return html;
-  } catch {
-    return null;
-  } finally {
-    if (browser) await browser.close();
-  }
-}
-
 function getBaseUrl(url: string): string {
   const parsed = new URL(url);
   return `${parsed.protocol}//${parsed.host}`;
@@ -74,7 +54,6 @@ function getBaseUrl(url: string): string {
 export async function fetchResources(url: string): Promise<FetchedResources> {
   const baseUrl = getBaseUrl(url);
 
-  // Fetch all resources in parallel — page, robots, llms, sitemap
   const [pageResult, robotsResult, llmsResult, sitemapResult] =
     await Promise.all([
       fetchWithTimeout(url, 20000),
@@ -85,15 +64,16 @@ export async function fetchResources(url: string): Promise<FetchedResources> {
 
   let pageHtml = pageResult.body;
 
-  // If fetch failed with 403, retry with Playwright (headless browser)
+  // If direct fetch failed with 403, retry through rotating proxy
   if (!pageHtml && pageResult.status === 403) {
-    pageHtml = await fetchWithPlaywright(url);
+    console.log(`[Fetcher] Direct fetch got 403, retrying via proxy: ${url}`);
+    pageHtml = await fetchWithProxy(url);
   }
 
   if (!pageHtml) {
     if (pageResult.status === 403) {
       throw new Error(
-        `Access denied (403) for ${url}. This site uses bot protection that blocked both fetch and headless browser requests.`
+        `Access denied (403) for ${url}. The site's bot protection blocked both direct and proxied requests.`
       );
     }
     if (pageResult.status === 404) {
