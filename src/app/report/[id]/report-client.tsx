@@ -11,14 +11,16 @@ export default function ReportClient({
   id: string;
 }) {
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Report: {result.pageTitle || result.url}</h1>
-        <span className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-500 dark:bg-zinc-800">
+    <div className="py-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Report: {result.pageTitle || result.url}
+        </h1>
+        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-400">
           ID: {id}
         </span>
       </div>
-      <Report result={result} />
+      <Report result={result} id={id} />
     </div>
   );
 }

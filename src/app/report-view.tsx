@@ -22,7 +22,6 @@ function generateMarkdown(result: AnalysisResult): string {
   lines.push(`**Analyzed:** ${new Date(result.fetchedAt).toLocaleString()}`);
   lines.push("");
 
-  // Metadata
   lines.push("## Quick Stats");
   lines.push("");
   lines.push(`- Words: ${result.metadata.wordCount.toLocaleString()}`);
@@ -37,7 +36,6 @@ function generateMarkdown(result: AnalysisResult): string {
   lines.push(`- Sitemap: ${result.metadata.hasSitemap ? "Found" : "Missing"}`);
   lines.push("");
 
-  // Categories
   lines.push("## Category Breakdown");
   lines.push("");
   const sorted = [...result.categories].sort((a, b) => b.weight - a.weight);
@@ -46,13 +44,7 @@ function generateMarkdown(result: AnalysisResult): string {
     lines.push("");
     for (const f of cat.findings) {
       const icon =
-        f.type === "good"
-          ? "[PASS]"
-          : f.type === "critical"
-            ? "[CRITICAL]"
-            : f.type === "warning"
-              ? "[WARNING]"
-              : "[INFO]";
+        f.type === "good" ? "[PASS]" : f.type === "critical" ? "[CRITICAL]" : f.type === "warning" ? "[WARNING]" : "[INFO]";
       lines.push(`- ${icon} ${f.message}`);
     }
     if (cat.fixes.length > 0) {
@@ -65,7 +57,6 @@ function generateMarkdown(result: AnalysisResult): string {
     lines.push("");
   }
 
-  // Content recommendations
   if (result.generatedFixes.contentRecommendations.length > 0) {
     lines.push("## Content Recommendations");
     lines.push("");
@@ -75,7 +66,6 @@ function generateMarkdown(result: AnalysisResult): string {
     lines.push("");
   }
 
-  // Fix code
   if (result.generatedFixes.jsonLd) {
     lines.push("## Fix: JSON-LD Structured Data");
     lines.push("");
@@ -130,14 +120,14 @@ function downloadMarkdown(result: AnalysisResult) {
 function ScoreDonut({ score, rating }: { score: number; rating: string }) {
   const circumference = 2 * Math.PI * 54;
   const offset = circumference - (score / 100) * circumference;
-  const color =
+  const strokeColor =
     score >= 80
-      ? "text-green-500"
+      ? "#16a34a"
       : score >= 60
-        ? "text-yellow-500"
+        ? "#ca8a04"
         : score >= 40
-          ? "text-orange-500"
-          : "text-red-500";
+          ? "#ea580c"
+          : "#ef4444";
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -148,28 +138,26 @@ function ScoreDonut({ score, rating }: { score: number; rating: string }) {
             cy="60"
             r="54"
             fill="none"
-            stroke="currentColor"
+            stroke="#f3f4f6"
             strokeWidth="8"
-            className="text-zinc-200 dark:text-zinc-800"
           />
           <circle
             cx="60"
             cy="60"
             r="54"
             fill="none"
-            stroke="currentColor"
+            stroke={strokeColor}
             strokeWidth="8"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className={color}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-3xl font-bold">{Math.round(score)}</span>
+          <span className="text-3xl font-extrabold text-gray-900">{Math.round(score)}</span>
         </div>
       </div>
-      <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium capitalize dark:bg-zinc-800">
+      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold capitalize text-gray-600">
         {rating.replace("-", " ")}
       </span>
     </div>
@@ -178,11 +166,10 @@ function ScoreDonut({ score, rating }: { score: number; rating: string }) {
 
 function FindingBadge({ type }: { type: Finding["type"] }) {
   const styles = {
-    good: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-    warning:
-      "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
-    critical: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-    info: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
+    good: "bg-green-50 text-green-700",
+    warning: "bg-yellow-50 text-yellow-700",
+    critical: "bg-red-50 text-red-700",
+    info: "bg-blue-50 text-blue-700",
   };
   const labels = {
     good: "Pass",
@@ -192,21 +179,13 @@ function FindingBadge({ type }: { type: Finding["type"] }) {
   };
 
   return (
-    <span
-      className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${styles[type]}`}
-    >
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${styles[type]}`}>
       {labels[type]}
     </span>
   );
 }
 
-function CategoryCard({
-  category,
-  index,
-}: {
-  category: CategoryResult;
-  index: number;
-}) {
+function CategoryCard({ category, index }: { category: CategoryResult; index: number }) {
   const [open, setOpen] = useState(index < 3);
   const barColor =
     category.score >= 8
@@ -218,88 +197,73 @@ function CategoryCard({
           : "bg-red-500";
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:shadow-lg">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between p-4 text-left"
+        className="flex w-full items-center justify-between p-5 text-left"
       >
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col">
-            <span className="font-medium">{category.name}</span>
-            <span className="text-xs text-zinc-500">
-              Weight: {category.weight}%
-            </span>
-          </div>
+        <div>
+          <span className="font-semibold text-gray-900">{category.name}</span>
+          <span className="ml-2 text-xs text-gray-400">Weight: {category.weight}%</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-20 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div className="h-2 w-20 overflow-hidden rounded-full bg-gray-100">
               <div
                 className={`h-full rounded-full ${barColor}`}
                 style={{ width: `${(category.score / 10) * 100}%` }}
               />
             </div>
-            <span className="w-10 text-right text-sm font-semibold">
+            <span className="w-10 text-right text-sm font-bold text-gray-900">
               {category.score}/10
             </span>
           </div>
           <svg
-            className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 9l-7 7-7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-zinc-100 px-4 pb-4 pt-3 dark:border-zinc-800">
+        <div className="border-t border-gray-100 px-5 pb-5 pt-4">
           <ul className="space-y-2">
             {category.findings.map((f, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <FindingBadge type={f.type} />
-                <span className="text-zinc-700 dark:text-zinc-300">
-                  {f.message}
-                </span>
+                <span className="text-gray-600">{f.message}</span>
               </li>
             ))}
           </ul>
 
           {category.fixes.length > 0 && (
             <div className="mt-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
                 Recommended Fixes
               </h4>
               <ul className="space-y-2">
                 {category.fixes.map((fix, i) => (
-                  <li
-                    key={i}
-                    className="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-800"
-                  >
+                  <li key={i} className="rounded-2xl bg-gray-50 p-4 text-sm">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                           fix.priority === "critical"
-                            ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
+                            ? "bg-red-50 text-red-700"
                             : fix.priority === "medium"
-                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400"
-                              : "bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
+                              ? "bg-yellow-50 text-yellow-700"
+                              : "bg-gray-100 text-gray-500"
                         }`}
                       >
                         {fix.priority}
                       </span>
-                      <span className="font-medium">{fix.title}</span>
+                      <span className="font-semibold text-gray-900">{fix.title}</span>
                     </div>
-                    <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-                      {fix.description}
-                    </p>
+                    <p className="mt-1 text-gray-500">{fix.description}</p>
                   </li>
                 ))}
               </ul>
@@ -311,15 +275,7 @@ function CategoryCard({
   );
 }
 
-function CodeBlock({
-  title,
-  code,
-  language,
-}: {
-  title: string;
-  code: string;
-  language: string;
-}) {
+function CodeBlock({ title, code, language }: { title: string; code: string; language: string }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -329,35 +285,29 @@ function CodeBlock({
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-        <span className="text-sm font-medium">{title}</span>
+    <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+      <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+        <span className="text-sm font-semibold text-gray-900">{title}</span>
         <div className="flex items-center gap-2">
-          <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800">
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
             {language}
           </span>
           <button
             onClick={handleCopy}
-            className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded-full px-3 py-1 text-xs font-semibold text-purple-500 transition-colors hover:bg-purple-50"
           >
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
       </div>
-      <pre className="overflow-x-auto p-4 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+      <pre className="overflow-x-auto bg-gray-50 p-5 text-xs leading-relaxed text-gray-700">
         <code>{code}</code>
       </pre>
     </div>
   );
 }
 
-export default function Report({
-  result,
-  id,
-}: {
-  result: AnalysisResult;
-  id?: string;
-}) {
+export default function Report({ result, id }: { result: AnalysisResult; id?: string }) {
   const [linkCopied, setLinkCopied] = useState(false);
 
   function handleCopyLink() {
@@ -374,7 +324,7 @@ export default function Report({
       <div className="flex flex-wrap gap-3 justify-end">
         <button
           onClick={() => downloadMarkdown(result)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:border-purple-200 hover:text-purple-600"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -384,7 +334,7 @@ export default function Report({
         {id && (
           <button
             onClick={handleCopyLink}
-            className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700"
+            className="inline-flex items-center gap-2 rounded-full bg-purple-500 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-purple-600"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -395,26 +345,26 @@ export default function Report({
       </div>
 
       {/* Header */}
-      <div className="flex flex-col items-center gap-6 rounded-2xl border border-zinc-200 bg-white p-8 sm:flex-row sm:items-start dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex flex-col items-center gap-6 rounded-2xl border border-gray-100 bg-white p-8 sm:flex-row sm:items-start">
         <ScoreDonut score={result.overallScore} rating={result.rating} />
         <div className="flex-1 text-center sm:text-left">
-          <h2 className="text-2xl font-bold">{result.pageTitle || result.url}</h2>
-          <p className="mt-1 text-sm text-zinc-500 break-all">{result.url}</p>
+          <h2 className="text-2xl font-bold text-gray-900">{result.pageTitle || result.url}</h2>
+          <p className="mt-1 text-sm text-gray-400 break-all">{result.url}</p>
           <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-            <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+            <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-500">
               {result.industry}
             </span>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
               {result.metadata.wordCount.toLocaleString()} words
             </span>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
               {result.metadata.headingCount} headings
             </span>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
               {result.metadata.schemaTypes.length} schemas
             </span>
           </div>
-          <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs text-zinc-500 sm:justify-start">
+          <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs text-gray-400 sm:justify-start">
             <span>
               robots.txt:{" "}
               <strong className={result.metadata.hasRobotsTxt ? "text-green-600" : "text-red-500"}>
@@ -439,7 +389,7 @@ export default function Report({
 
       {/* Categories */}
       <div>
-        <h2 className="mb-4 text-xl font-bold">Category Breakdown</h2>
+        <h2 className="mb-4 text-xl font-bold text-gray-900">Category Breakdown</h2>
         <div className="space-y-3">
           {[...result.categories]
             .sort((a, b) => b.weight - a.weight)
@@ -452,13 +402,13 @@ export default function Report({
       {/* Content Recommendations */}
       {result.generatedFixes.contentRecommendations.length > 0 && (
         <div>
-          <h2 className="mb-4 text-xl font-bold">Content Recommendations</h2>
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-4 text-xl font-bold text-gray-900">Content Recommendations</h2>
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
             <ul className="space-y-3">
               {result.generatedFixes.contentRecommendations.map((rec, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm">
-                  <span className="mt-0.5 text-purple-600">&#8226;</span>
-                  <span className="text-zinc-700 dark:text-zinc-300">{rec}</span>
+                  <span className="mt-0.5 text-purple-500">&#8226;</span>
+                  <span className="text-gray-600">{rec}</span>
                 </li>
               ))}
             </ul>
@@ -468,45 +418,29 @@ export default function Report({
 
       {/* Generated Fix Code */}
       <div>
-        <h2 className="mb-4 text-xl font-bold">Generated Fix Code</h2>
+        <h2 className="mb-4 text-xl font-bold text-gray-900">Generated Fix Code</h2>
         <div className="space-y-4">
           {result.generatedFixes.jsonLd && (
-            <CodeBlock
-              title="JSON-LD Structured Data"
-              code={result.generatedFixes.jsonLd}
-              language="json"
-            />
+            <CodeBlock title="JSON-LD Structured Data" code={result.generatedFixes.jsonLd} language="json" />
           )}
           {result.generatedFixes.metaTags && (
-            <CodeBlock
-              title="Meta Tags"
-              code={result.generatedFixes.metaTags}
-              language="html"
-            />
+            <CodeBlock title="Meta Tags" code={result.generatedFixes.metaTags} language="html" />
           )}
           {result.generatedFixes.robotsTxt && (
-            <CodeBlock
-              title="robots.txt Rules"
-              code={result.generatedFixes.robotsTxt}
-              language="text"
-            />
+            <CodeBlock title="robots.txt Rules" code={result.generatedFixes.robotsTxt} language="text" />
           )}
           {result.generatedFixes.llmsTxt && (
-            <CodeBlock
-              title="llms.txt"
-              code={result.generatedFixes.llmsTxt}
-              language="text"
-            />
+            <CodeBlock title="llms.txt" code={result.generatedFixes.llmsTxt} language="text" />
           )}
         </div>
       </div>
 
-      {/* Metadata */}
-      <div className="text-center text-xs text-zinc-400">
+      {/* Footer */}
+      <div className="text-center text-xs text-gray-400">
         Analyzed at {new Date(result.fetchedAt).toLocaleString()} | Powered by{" "}
         <a
           href="https://www.sucana.ai"
-          className="text-purple-600 hover:underline"
+          className="font-semibold text-purple-500 transition-colors hover:text-purple-600"
           target="_blank"
           rel="noopener noreferrer"
         >
