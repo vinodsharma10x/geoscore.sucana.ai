@@ -73,6 +73,26 @@ export async function analyzeUrl(url: string): Promise<AnalysisResult> {
     contentRecommendations: generateContentRecommendations(page),
   };
 
+  // Extract unique internal links (max 50)
+  const seen = new Set<string>();
+  const internalLinks = page.links
+    .filter((l) => {
+      if (!l.isInternal || !l.href) return false;
+      try {
+        const abs = new URL(l.href, url).href;
+        if (seen.has(abs)) return false;
+        seen.add(abs);
+        return true;
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 50)
+    .map((l) => ({
+      href: new URL(l.href, url).href,
+      text: l.text.trim() || new URL(l.href, url).pathname,
+    }));
+
   return {
     url,
     pageTitle: page.title,
@@ -81,6 +101,7 @@ export async function analyzeUrl(url: string): Promise<AnalysisResult> {
     rating,
     categories,
     generatedFixes,
+    internalLinks,
     fetchedAt: new Date().toISOString(),
     metadata: {
       wordCount: page.wordCount,

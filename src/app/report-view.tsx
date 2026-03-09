@@ -307,7 +307,23 @@ function CodeBlock({ title, code, language }: { title: string; code: string; lan
   );
 }
 
-export default function Report({ result, id }: { result: AnalysisResult; id?: string }) {
+export default function Report({
+  result,
+  id,
+  internalLinks,
+  analyzedUrls,
+  onAnalyzeLink,
+  isAnalyzing,
+  analyzingUrl,
+}: {
+  result: AnalysisResult;
+  id?: string;
+  internalLinks?: { href: string; text: string }[];
+  analyzedUrls?: Set<string>;
+  onAnalyzeLink?: (url: string) => void;
+  isAnalyzing?: boolean;
+  analyzingUrl?: string | null;
+}) {
   const [linkCopied, setLinkCopied] = useState(false);
 
   function handleCopyLink() {
@@ -434,6 +450,64 @@ export default function Report({ result, id }: { result: AnalysisResult; id?: st
           )}
         </div>
       </div>
+
+      {/* Internal Links — Pages found */}
+      {internalLinks && internalLinks.length > 0 && onAnalyzeLink && (
+        <div>
+          <h2 className="mb-4 text-xl font-bold text-gray-900">
+            Pages found on this site
+          </h2>
+          <p className="mb-4 text-sm text-gray-500">
+            We found {internalLinks.length} internal link{internalLinks.length !== 1 ? "s" : ""} on the pages you analyzed. Click &quot;Analyze&quot; to scan any page and build your site-wide score.
+          </p>
+          <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+            <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+              {internalLinks.map((link) => {
+                const isCurrentlyAnalyzing = analyzingUrl === link.href;
+                let pathname: string;
+                try {
+                  pathname = new URL(link.href).pathname;
+                } catch {
+                  pathname = link.href;
+                }
+
+                return (
+                  <div
+                    key={link.href}
+                    className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">
+                        {link.text || pathname}
+                      </p>
+                      <p className="truncate text-xs text-gray-400">
+                        {pathname}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => onAnalyzeLink(link.href)}
+                      disabled={isAnalyzing}
+                      className="shrink-0 rounded-full bg-purple-500 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-purple-600 disabled:opacity-60"
+                    >
+                      {isCurrentlyAnalyzing ? (
+                        <span className="flex items-center gap-1.5">
+                          <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Analyzing...
+                        </span>
+                      ) : (
+                        "Analyze"
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-400">

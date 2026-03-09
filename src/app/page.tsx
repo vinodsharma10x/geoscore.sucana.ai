@@ -1,30 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useUser, SignIn } from "@clerk/nextjs";
 import type { AnalysisResult } from "@/lib/types";
 import Report from "./report-view";
 
+type ResultWithId = AnalysisResult & { id?: string };
+
 export default function Home() {
+  const { isSignedIn, isLoaded } = useUser();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<
-    (AnalysisResult & { id?: string }) | null
-  >(null);
+  const [results, setResults] = useState<ResultWithId[]>([]);
+  const [analyzingUrl, setAnalyzingUrl] = useState<string | null>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
+  const pendingUrlRef = useRef<string | null>(null);
 
-  async function handleAnalyze(e: React.FormEvent) {
-    e.preventDefault();
-    if (!url.trim()) return;
+  // After sign-in completes, auto-trigger the pending analysis
+  useEffect(() => {
+    if (isSignedIn && pendingUrlRef.current) {
+      const pendingUrl = pendingUrlRef.current;
+      pendingUrlRef.current = null;
+      setShowSignIn(false);
+      analyzeUrl(pendingUrl);
+    }
+  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const analyzeUrl = useCallback(async (targetUrl: string) => {
     setLoading(true);
     setError(null);
-    setResult(null);
+    setAnalyzingUrl(targetUrl);
 
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: targetUrl }),
       });
 
       const data = await res.json();
@@ -33,13 +45,59 @@ export default function Home() {
         throw new Error(data.error || "Analysis failed");
       }
 
-      setResult(data);
+      setResults((prev) => {
+        // Replace if same URL already analyzed, otherwise append
+        const existing = prev.findIndex((r) => r.url === data.url);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = data;
+          return updated;
+        }
+        return [...prev, data];
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setAnalyzingUrl(null);
     }
+  }, []);
+
+  async function handleAnalyze(e: React.FormEvent) {
+    e.preventDefault();
+    if (!url.trim()) return;
+    const normalized = url.trim().startsWith("http")
+      ? url.trim()
+      : `https://${url.trim()}`;
+
+    // Gate: require sign-in before analysis
+    if (!isSignedIn) {
+      pendingUrlRef.current = normalized;
+      setShowSignIn(true);
+      return;
+    }
+
+    setResults([]);
+    await analyzeUrl(normalized);
   }
+
+  // Aggregate score across all analyzed pages
+  const aggregateScore =
+    results.length > 1
+      ? Math.round(
+          results.reduce((sum, r) => sum + r.overallScore, 0) / results.length
+        )
+      : null;
+
+  // Collect all internal links from all results, deduped, excluding already-analyzed URLs
+  const analyzedUrls = new Set(results.map((r) => r.url));
+  const allInternalLinks = results
+    .flatMap((r) => r.internalLinks || [])
+    .filter((link) => {
+      if (analyzedUrls.has(link.href)) return false;
+      analyzedUrls.add(link.href); // dedup across results
+      return true;
+    });
 
   return (
     <div>
@@ -108,7 +166,7 @@ export default function Home() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                Fetching and analyzing page... This may take 10-15 seconds.
+                Analyzing {analyzingUrl ? new URL(analyzingUrl).pathname : "page"}... This may take 10-15 seconds.
               </div>
             </div>
           )}
@@ -121,11 +179,89 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Results */}
-      {result && <Report result={result} id={result.id} />}
+      {/* Sign-in modal overlay */}
+      {showSignIn && !isSignedIn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowSignIn(false);
+                pendingUrlRef.current = null;
+              }}
+              className="absolute -top-3 -right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-400 shadow-md transition-colors hover:text-gray-600"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <SignIn
+              appearance={{
+                elements: {
+                  rootBox: "mx-auto",
+                  card: "shadow-2xl rounded-2xl",
+                },
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Aggregate Site Score */}
+      {aggregateScore !== null && (
+        <section className="mb-8">
+          <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Site Score (Average)
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Based on {results.length} pages analyzed
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-4xl font-extrabold text-purple-500">
+                  {aggregateScore}
+                  <span className="text-lg text-gray-400">/100</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini scores for each page */}
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {results.map((r) => (
+                <div
+                  key={r.url}
+                  className="flex items-center justify-between rounded-xl bg-white px-4 py-2.5 text-sm"
+                >
+                  <span className="truncate text-gray-600 mr-3">
+                    {new URL(r.url).pathname || "/"}
+                  </span>
+                  <span className="shrink-0 font-bold text-gray-900">
+                    {Math.round(r.overallScore)}/100
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Results — show the latest result's full report */}
+      {results.length > 0 && (
+        <Report
+          result={results[results.length - 1]}
+          id={results[results.length - 1].id}
+          internalLinks={allInternalLinks}
+          analyzedUrls={new Set(results.map((r) => r.url))}
+          onAnalyzeLink={analyzeUrl}
+          isAnalyzing={loading}
+          analyzingUrl={analyzingUrl}
+        />
+      )}
 
       {/* Below-the-fold content — only when no result */}
-      {!result && (
+      {results.length === 0 && !loading && (
         <>
           {/* How it works */}
           <section className="py-16 sm:py-24">

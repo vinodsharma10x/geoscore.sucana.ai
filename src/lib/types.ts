@@ -48,6 +48,7 @@ export interface AnalysisResult {
     llmsTxt: string | null;
     contentRecommendations: string[];
   };
+  internalLinks: { href: string; text: string }[];
   fetchedAt: string; // ISO date
   metadata: {
     wordCount: number;
